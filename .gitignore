@@ -1,0 +1,9 @@
+node_modules/
+.integration/
+.clasp.json
+.clasprc.json
+.env
+.env.*
+!.env.example
+*.log
+Thumbs.db
