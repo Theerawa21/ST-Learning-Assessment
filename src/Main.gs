@@ -15,4 +15,5 @@ function api(request){
  }catch(e){return {ok:false,error:{code:e.code||'SERVER',message:e.code?e.message:'ไม่สามารถดำเนินการได้ กรุณาลองใหม่หรือติดต่อผู้ดูแล'}};}finally{if(readLock)readLock.releaseLock();}
 }
 function bootstrap_(actor){return {user:actor,schoolName:'โรงเรียนเซนต์เทเรซา',departments:readRecords_('Departments').filter(function(r){return r.active!==false;}),curricula:readRecords_('Curricula').filter(function(r){return r.active!==false;}),oauthClientId:props_().getProperty('OAUTH_CLIENT_ID')||''};}
-function loginConfig(){return {authMode:props_().getProperty('AUTH_MODE')||'WORKSPACE',oauthClientId:props_().getProperty('OAUTH_CLIENT_ID')||''};}
+function loginConfig(){return {authMode:props_().getProperty('AUTH_MODE')||'WORKSPACE',oauthClientId:props_().getProperty('OAUTH_CLIENT_ID')||'',redirectUri:ScriptApp.getService().getUrl()};}
+
