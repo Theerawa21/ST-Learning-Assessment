@@ -4,6 +4,8 @@ function api(request){
  var readLock=null;
  try{
   request=request||{};if(JSON.stringify(request).length>100000)fail_('LIMIT','ข้อมูลคำสั่งมีขนาดใหญ่เกินไป');
+  if(request.action==='registrationInfo')return {ok:true,data:registrationInfo_({idToken:request.idToken})};
+  if(request.action==='register')return {ok:true,data:registerTeacher_({idToken:request.idToken},request.payload||{})};
   var reads=['bootstrap','subjects','indicators','dashboard','documents','queue','users','adminData','analysis','analysisContext','subjectMapping','reportModel','notifications','documentAuthors'];
   if(reads.indexOf(request.action)>=0){readLock=LockService.getScriptLock();readLock.waitLock(30000);}
   var actor=requireActor_({idToken:request.idToken}),p=request.payload||{},id=request.requestId;
