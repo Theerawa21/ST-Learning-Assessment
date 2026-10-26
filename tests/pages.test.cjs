@@ -1,0 +1,34 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const root=path.join(__dirname,'..');
+test('Pages bridge rejects foreign origins, foreign windows and wrong channels',()=>{
+ const channel='12345678-1234-1234-1234-123456789012',top={postMessage(){}},calls=[];let receive;
+ const runner={withSuccessHandler(){return this;},withFailureHandler(){return this;},api(req){calls.push(req);}};
+ const window={top,addEventListener(type,fn){receive=fn;}};
+ const code=fs.readFileSync(path.join(root,'src/StaticBridge.html'),'utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
+ vm.runInNewContext(code,{window,google:{script:{url:{getLocation(fn){fn({parameter:{channel}});}},run:runner}}});
+ const data={type:'st:request',channel,id:'req-1',request:{action:'bootstrap',idToken:'test-token'}};
+ receive({origin:'https://attacker.test',source:top,data});
+ receive({origin:'https://theerawa21.github.io',source:{},data});
+ receive({origin:'https://theerawa21.github.io',source:top,data:{...data,channel:'other'}});
+ assert.equal(calls.length,0);
+ receive({origin:'https://theerawa21.github.io',source:top,data});
+ assert.equal(calls.length,1);assert.equal(calls[0],data.request);
+});
+test('Pages client requires identity and authenticates bridge handshake before sending token',async()=>{
+ let receive,frame;const sent=[];let count=0;
+ const window={ST_PAGES_CONFIG:{apiUrl:'https://script.google.com/macros/s/test/exec'},addEventListener(type,fn){receive=fn;}};
+ const document={createElement(){return {};},body:{append(el){frame=el;}}};
+ vm.runInNewContext(fs.readFileSync(path.join(root,'web/pages-client.js'),'utf8'),{window,document,crypto:{randomUUID:()=>`id-${++count}`},URL,setTimeout:()=>1,clearTimeout(){},Map});
+ assert.equal((await window.ST_HOST.request({action:'bootstrap'})).error.code,'IDENTITY');assert.equal(frame,undefined);
+ const result=window.ST_HOST.request({action:'bootstrap',idToken:'test-token'}),channel=new URL(frame.src).searchParams.get('channel');
+ assert.ok(!frame.src.includes('test-token'));
+ const peer={postMessage(data,origin){sent.push({data,origin});}};
+ receive({origin:'https://evil.test',source:peer,data:{type:'st:ready',channel}});
+ await Promise.resolve();assert.equal(sent.length,0);
+ receive({origin:'https://example.googleusercontent.com',source:peer,data:{type:'st:ready',channel}});
+ await Promise.resolve();assert.equal(sent.length,1);assert.equal(sent[0].origin,'https://example.googleusercontent.com');
+ const id=sent[0].data.id;
+ receive({origin:'https://example.googleusercontent.com',source:{},data:{type:'st:response',channel,id,result:{ok:true,data:'forged'}}});
+ receive({origin:'https://example.googleusercontent.com',source:peer,data:{type:'st:response',channel,id,result:{ok:true,data:'verified'}}});
+ assert.equal((await result).data,'verified');
+});

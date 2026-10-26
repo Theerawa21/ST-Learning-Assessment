@@ -1,4 +1,4 @@
-function doGet(){return HtmlService.createTemplateFromFile('Index').evaluate().setTitle('ST-Learning Assessment | โรงเรียนเซนต์เทเรซา').addMetaTag('viewport','width=device-width, initial-scale=1');}
+function doGet(event){if(event&&event.parameter&&event.parameter.mode==='bridge')return HtmlService.createHtmlOutputFromFile('StaticBridge').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);return HtmlService.createTemplateFromFile('Index').evaluate().setTitle('ST-Learning Assessment | โรงเรียนเซนต์เทเรซา').addMetaTag('viewport','width=device-width, initial-scale=1');}
 function include_(name){return HtmlService.createHtmlOutputFromFile(name).getContent();}
 function api(request){
  var readLock=null;
@@ -18,4 +18,3 @@ function api(request){
 }
 function bootstrap_(actor){return {user:actor,schoolName:'โรงเรียนเซนต์เทเรซา',departments:readRecords_('Departments').filter(function(r){return r.active!==false;}),curricula:readRecords_('Curricula').filter(function(r){return r.active!==false;}),oauthClientId:props_().getProperty('OAUTH_CLIENT_ID')||''};}
 function loginConfig(){return {authMode:props_().getProperty('AUTH_MODE')||'WORKSPACE',oauthClientId:props_().getProperty('OAUTH_CLIENT_ID')||'',redirectUri:ScriptApp.getService().getUrl()};}
-
