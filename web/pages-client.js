@@ -22,7 +22,7 @@
   return ready.promise;
  }
  async function request(req){
-  if(!req.idToken)return {ok:false,error:{code:'IDENTITY',message:'กรุณาเข้าสู่ระบบด้วย Google'}};
+  if(!req.idToken&&!req.sessionToken&&!['loginNames','passwordLogin','logout'].includes(req.action))return {ok:false,error:{code:'IDENTITY',message:'กรุณาเข้าสู่ระบบด้วย Google'}};
   await connect();
   return new Promise((resolve,reject)=>{
    const id=crypto.randomUUID(),timer=setTimeout(()=>{pending.delete(id);reject(failure('การเชื่อมต่อหมดเวลา กรุณาลองอีกครั้ง'));},60000);

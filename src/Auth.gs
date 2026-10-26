@@ -11,7 +11,7 @@ function identityEmail_(context){
  email=text_(email,254).toLowerCase();if(!email||!/^\S+@\S+\.\S+$/.test(email))fail_('IDENTITY','ไม่สามารถอ่านตัวตน Google ได้ กรุณาติดต่อผู้ดูแลเพื่อตรวจการเผยแพร่หรือใช้ OAuth');
  var domain=props_().getProperty('ALLOWED_DOMAIN');if(domain&&email.split('@')[1]!==domain.toLowerCase())fail_('ACCESS','บัญชีนี้อยู่นอกโดเมนที่อนุญาต');return email;
 }
-function requireActor_(context){var email=identityEmail_(context);var user=readRecords_('Users').find(function(u){return u.email===email;});if(!user||user.active!==true)fail_('ACCESS','บัญชีนี้ยังไม่ได้รับอนุญาตหรือถูกปิดใช้งาน');return user;}
+function requireActor_(context){if(context&&context.sessionToken)return sessionActor_(context.sessionToken);var email=identityEmail_(context);var user=readRecords_('Users').find(function(u){return u.email===email;});if(!user||user.active!==true)fail_('ACCESS','บัญชีนี้ยังไม่ได้รับอนุญาตหรือถูกปิดใช้งาน');return user;}
 function hasRole_(actor,role){return (actor.roles||[]).indexOf(role)>=0;}
 function isTeacherOf_(actor,subject){return readRecords_('TeachingAssignments').some(function(a){return a.subjectId===subject.id&&a.teacherId===actor.id;});}
 function headOf_(actor,subject){var d=findRecord_('Departments',subject.departmentId);return hasRole_(actor,'HEAD')&&d&&(d.headUserId===actor.id||d.substituteReviewerId===actor.id);}

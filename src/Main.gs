@@ -4,11 +4,14 @@ function api(request){
  var readLock=null;
  try{
   request=request||{};if(JSON.stringify(request).length>100000)fail_('LIMIT','ข้อมูลคำสั่งมีขนาดใหญ่เกินไป');
+  if(request.action==='loginNames')return {ok:true,data:loginNames_((request.payload||{}).query)};
+  if(request.action==='passwordLogin')return {ok:true,data:passwordLogin_(request.payload||{})};
+  if(request.action==='logout'){if(request.sessionToken)CacheService.getScriptCache().remove(sessionKey_(request.sessionToken));return {ok:true,data:{loggedOut:true}};}
   if(request.action==='registrationInfo')return {ok:true,data:registrationInfo_({idToken:request.idToken})};
   if(request.action==='register')return {ok:true,data:registerTeacher_({idToken:request.idToken},request.payload||{})};
   var reads=['bootstrap','subjects','indicators','dashboard','documents','queue','users','adminData','analysis','analysisContext','subjectMapping','reportModel','notifications','documentAuthors'];
   if(reads.indexOf(request.action)>=0){readLock=LockService.getScriptLock();readLock.waitLock(30000);}
-  var actor=requireActor_({idToken:request.idToken}),p=request.payload||{},id=request.requestId;
+  var actor=requireActor_({idToken:request.idToken,sessionToken:request.sessionToken}),p=request.payload||{},id=request.requestId;
   if(readLock&&readRecords_('OperationRequests').some(function(o){return o.status==='STARTED'||o.status==='RECOVERY_REQUIRED';})&&!(hasRole_(actor,'ADMIN')&&['bootstrap','adminData'].indexOf(request.action)>=0))fail_('RECOVERY','มีรายการบันทึกค้าง กรุณาให้ผู้ดูแลกู้คืนก่อนเปิดข้อมูล');
   var routes={bootstrap:function(){return bootstrap_(actor);}};
   if(typeof extraRoutes_==='function')Object.assign(routes,extraRoutes_(actor,p,id));
