@@ -17,7 +17,7 @@ var SCHEMA_ = {
  ActivityLogs:['id','actorId','action','entityId','requestId','createdAt'],Settings:['id','value'],
  OperationRequests:['id','actorId','operation','payloadHash','status','result','snapshotFileId','error','createdAt','updatedAt']
 };
-var DB_TX_=null;
+var DB_TX_=null,DB_REQUEST_CACHE_=null,DB_REQUEST_BOOK_=null;
 function props_(){return PropertiesService.getScriptProperties();}
 function now_(){return new Date().toISOString();}
 function uid_(){return Utilities.getUuid();}
@@ -25,7 +25,7 @@ function fail_(code,message){var e=new Error(code+': '+message);e.code=code;thro
 function text_(value,max){var s=String(value==null?'':value).trim();if(s.length>(max||4000))fail_('INPUT','ข้อความยาวเกินกำหนด');return s;}
 function required_(value,label,max){var s=text_(value,max);if(!s)fail_('INPUT','กรุณาระบุ'+label);return s;}
 function hash_(value){return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,JSON.stringify(value),Utilities.Charset.UTF_8));}
-function book_(){var id=props_().getProperty('DATABASE_ID');if(!id)fail_('SETUP','ยังไม่ได้ตั้งค่าฐานข้อมูล กรุณาติดต่อผู้ดูแล');return SpreadsheetApp.openById(id);}
+function book_(){var id=props_().getProperty('DATABASE_ID');if(!id)fail_('SETUP','ยังไม่ได้ตั้งค่าฐานข้อมูล กรุณาติดต่อผู้ดูแล');if(DB_REQUEST_CACHE_!==null){if(!DB_REQUEST_BOOK_)DB_REQUEST_BOOK_=SpreadsheetApp.openById(id);return DB_REQUEST_BOOK_;}return SpreadsheetApp.openById(id);}
 function rawRead_(table){
  if(!Object.prototype.hasOwnProperty.call(SCHEMA_,table))fail_('TABLE','ไม่พบตาราง');
  var s=book_().getSheetByName(table);if(!s)fail_('SETUP','ไม่พบชีต '+table);
@@ -33,6 +33,7 @@ function rawRead_(table){
  return s.getRange(2,1,s.getLastRow()-1,SCHEMA_[table].length).getValues().filter(function(r){return r[0]!=='';}).map(function(row){var record={};SCHEMA_[table].forEach(function(key,i){var cell=row[i];record[key]=typeof cell==='string'&&cell.indexOf('j:')===0?JSON.parse(cell.slice(2)):cell;});return record;});
 }
 function rawWrite_(table,records){
+ if(DB_REQUEST_CACHE_)delete DB_REQUEST_CACHE_[table];
  var s=book_().getSheetByName(table),keys=SCHEMA_[table];if(!s||!keys)fail_('TABLE','ไม่พบตาราง');
  ensureRows_(s,records.length+1);
  var rows=records.map(function(r){return keys.map(function(k){var v='j:'+JSON.stringify(r[k]===undefined?null:r[k]);if(v.length>45000)fail_('LIMIT','ข้อมูลหนึ่งช่องยาวเกินขีดจำกัด กรุณาแยกเอกสาร');return v;});});
@@ -40,13 +41,14 @@ function rawWrite_(table,records){
  var old=s.getLastRow()-1;if(old>rows.length)s.getRange(rows.length+2,1,old-rows.length,keys.length).clearContent();
 }
 function ensureRows_(sheet,count){var current=sheet.getMaxRows();if(count>current)sheet.insertRowsAfter(current,count-current);}
-function readRecords_(table){if(DB_TX_){if(!DB_TX_.data[table])DB_TX_.data[table]=rawRead_(table);return JSON.parse(JSON.stringify(DB_TX_.data[table]));}return rawRead_(table);}
+function readRecords_(table){if(DB_TX_){if(!DB_TX_.data[table])DB_TX_.data[table]=rawRead_(table);return JSON.parse(JSON.stringify(DB_TX_.data[table]));}if(DB_REQUEST_CACHE_){if(!Object.prototype.hasOwnProperty.call(DB_REQUEST_CACHE_,table))DB_REQUEST_CACHE_[table]=rawRead_(table);return JSON.parse(JSON.stringify(DB_REQUEST_CACHE_[table]));}return rawRead_(table);}
 function writeRecords_(table,records){if(DB_TX_){DB_TX_.data[table]=JSON.parse(JSON.stringify(records));DB_TX_.dirty[table]=true;}else rawWrite_(table,records);}
 function findRecord_(table,id){return readRecords_(table).find(function(r){return r.id===id;})||null;}
 function upsert_(table,record){var rows=readRecords_(table),i=rows.findIndex(function(r){return r.id===record.id;});if(i<0)rows.push(record);else rows[i]=record;writeRecords_(table,rows);return record;}
 function append_(table,record){record.id=record.id||uid_();upsert_(table,record);return record;}
 function removeWhere_(table,predicate){writeRecords_(table,readRecords_(table).filter(function(r){return !predicate(r);}));}
 function mutate_(actor,requestId,operation,payloadHash,callback){
+ if(DB_REQUEST_CACHE_)DB_REQUEST_CACHE_={};
  requestId=required_(requestId,'รหัสคำสั่ง',100);if(requestId.length<8)fail_('REQUEST','รหัสคำสั่งสั้นเกินไป');
  var lock=LockService.getScriptLock();lock.waitLock(30000);var op=null,snapshot=null,snapshotFile=null;
  try{
