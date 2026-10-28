@@ -1,4 +1,4 @@
-var ROLES_=['ADMIN','TEACHER','HEAD','ASSESSMENT','ACADEMIC'];
+var ROLES_=['ADMIN','TEACHER','HEAD','ASSESSMENT','ACADEMIC','ACADEMIC_PRIMARY','ACADEMIC_SECONDARY'];
 function identityEmail_(context){
  var mode=props_().getProperty('AUTH_MODE')||'WORKSPACE',email='';
  if(mode==='OAUTH'){
@@ -15,7 +15,13 @@ function requireActor_(context){if(context&&context.sessionToken)return sessionA
 function hasRole_(actor,role){return (actor.roles||[]).indexOf(role)>=0;}
 function isTeacherOf_(actor,subject){return readRecords_('TeachingAssignments').some(function(a){return a.subjectId===subject.id&&a.teacherId===actor.id;});}
 function headOf_(actor,subject){var d=findRecord_('Departments',subject.departmentId);return hasRole_(actor,'HEAD')&&d&&(d.headUserId===actor.id||d.substituteReviewerId===actor.id);}
-function canReadSubject_(actor,subject){return hasRole_(actor,'ADMIN')||isTeacherOf_(actor,subject)||headOf_(actor,subject)||hasRole_(actor,'ASSESSMENT')||hasRole_(actor,'ACADEMIC');}
+function academicOf_(actor,subject){
+ if(!subject||!hasRole_(actor,'ACADEMIC'))return false;
+ var primary=hasRole_(actor,'ACADEMIC_PRIMARY'),secondary=hasRole_(actor,'ACADEMIC_SECONDARY');
+ if(!primary&&!secondary)return true;
+ var grade=String(subject.grade||'').replace(/\s/g,'');return primary&&/^ป[.．]?[1-6๑-๖]/.test(grade)||secondary&&/^ม[.．]?[1-6๑-๖]/.test(grade);
+}
+function canReadSubject_(actor,subject){return hasRole_(actor,'ADMIN')||isTeacherOf_(actor,subject)||headOf_(actor,subject)||hasRole_(actor,'ASSESSMENT')||academicOf_(actor,subject);}
 function authorize_(actor,action,resource){
  if(action==='ADMIN'){if(!hasRole_(actor,'ADMIN'))fail_('ACCESS','ต้องใช้สิทธิ์ผู้ดูแลระบบ');return;}
  if(action==='SUBJECT_READ'){if(!resource||!canReadSubject_(actor,resource))fail_('ACCESS','ไม่มีสิทธิ์เข้าถึงรายวิชานี้');return;}
@@ -25,7 +31,8 @@ function authorize_(actor,action,resource){
   if(hasRole_(actor,'ADMIN')||resource.authorId===actor.id){authorize_(actor,'SUBJECT_READ',s);return;}
   var stages={PENDING_HEAD:'HEAD',RETURNED_HEAD:'HEAD',PENDING_ASSESSMENT:'ASSESSMENT',RETURNED_ASSESSMENT:'ASSESSMENT',PENDING_ACADEMIC:'ACADEMIC',RETURNED_ACADEMIC:'ACADEMIC',APPROVED:'ALL'};
   var stage=stages[resource.status];if(stage==='ALL'&&canReadSubject_(actor,s))return;
-  if(stage==='HEAD'&&headOf_(actor,s))return;if(stage==='ASSESSMENT'&&hasRole_(actor,'ASSESSMENT'))return;if(stage==='ACADEMIC'&&hasRole_(actor,'ACADEMIC'))return;
+  if(stage==='HEAD'&&headOf_(actor,s))return;if(stage==='ASSESSMENT'&&hasRole_(actor,'ASSESSMENT'))return;if(stage==='ACADEMIC'&&academicOf_(actor,s))return;
+  if(hasRole_(actor,'ACADEMIC')&&!academicOf_(actor,s)&&!isTeacherOf_(actor,s)&&!headOf_(actor,s)&&!hasRole_(actor,'ASSESSMENT'))fail_('ACCESS','เอกสารอยู่นอกระดับชั้นที่รับผิดชอบ');
   if(readRecords_('ReviewRecords').some(function(r){return r.documentId===resource.id&&r.reviewerId===actor.id;}))return;
   fail_('ACCESS','เอกสารนี้ยังไม่อยู่ในขอบเขตหรือขั้นตอนที่ท่านตรวจได้');
  }

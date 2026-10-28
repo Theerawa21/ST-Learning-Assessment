@@ -7,7 +7,7 @@ window.ST=(()=>{
  const icon=name=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="${paths[name]||paths.file}"/></svg>`;
  const labels={NOT_STARTED:'ยังไม่จัดทำ',DRAFT:'ฉบับร่าง',REVISION_DRAFT:'ฉบับปรับปรุง',PENDING_HEAD:'รอหัวหน้ากลุ่มสาระ',PENDING_ASSESSMENT:'รองานวัดและประเมินผล',PENDING_ACADEMIC:'รอฝ่ายวิชาการ',RETURNED_HEAD:'กลุ่มสาระส่งกลับ',RETURNED_ASSESSMENT:'งานวัดฯ ส่งกลับ',RETURNED_ACADEMIC:'ฝ่ายวิชาการส่งกลับ',APPROVED:'อนุมัติสมบูรณ์'};
  const periods={BEFORE_MIDTERM:'ก่อนกลางภาค',MIDTERM:'กลางภาค',AFTER_MIDTERM:'หลังกลางภาค',FINAL:'ปลายภาค'};
- const roleLabels={ADMIN:'ผู้ดูแลระบบ',TEACHER:'ครูผู้สอน',HEAD:'หัวหน้ากลุ่มสาระ',ASSESSMENT:'งานวัดและประเมินผล',ACADEMIC:'ฝ่ายวิชาการ'};
+ const roleLabels={ADMIN:'ผู้ดูแลระบบ',TEACHER:'ครูผู้สอน',HEAD:'หัวหน้ากลุ่มสาระ',ASSESSMENT:'งานวัดและประเมินผล',ACADEMIC:'ฝ่ายวิชาการ',ACADEMIC_PRIMARY:'วิชาการประถม',ACADEMIC_SECONDARY:'วิชาการมัธยม'};
  const status=v=>`<span class="status ${String(v).startsWith('PENDING')?'pending':v==='APPROVED'?'approved':String(v).startsWith('RETURNED')?'returned':''}">${esc(labels[v]||v)}</span>`;
  const has=role=>(S.user?.roles||[]).includes(role);
  const date=v=>v?new Date(v).toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'short'}):'—';
