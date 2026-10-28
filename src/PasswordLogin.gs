@@ -26,7 +26,24 @@ function sessionActor_(token){
  return user;
 }
 function setMyLoginPassword_(actor,input){
+ return setUserLoginPassword_(actor,{userId:actor.id,password:input.password});
+}
+function setUserLoginPassword_(actor,input){
  authorize_(actor,'ADMIN');var password=String(input.password||'');
  if(password.length<16||password.length>128||password===password.charAt(0).repeat(password.length))fail_('INPUT','ใช้รหัสผู้ดูแลอย่างน้อย 16 ตัวอักษรและไม่ซ้ำตัวเดียวทั้งหมด');
- var salt=uid_()+uid_();props_().setProperty('LOCAL_CREDENTIAL_'+actor.id,JSON.stringify({salt:salt,digest:hash_({salt:salt,password:password})}));return {saved:true};
+ var user=findRecord_('Users',required_(input.userId,'บัญชีผู้ใช้',100));
+ if(!user||user.active!==true||!privilegedLogin_(user))fail_('INPUT','เลือกบัญชีผู้ดูแลหรือฝ่ายตรวจที่เปิดใช้งาน');
+ var lock=LockService.getScriptLock();lock.waitLock(30000);
+ try{var salt=uid_()+uid_();props_().setProperty('LOCAL_CREDENTIAL_'+user.id,JSON.stringify({salt:salt,digest:hash_({salt:salt,password:password})}));CacheService.getScriptCache().remove('login-attempt:'+hash_(user.id));return {saved:true};}finally{lock.releaseLock();}
 }
+/* Editor-only recovery; never exposed through api(). */
+function recoverOwnerLogin_(){
+ var email=String(Session.getActiveUser().getEmail()||'').toLowerCase(),owner=String(props_().getProperty('SETUP_OWNER_EMAIL')||'').toLowerCase();
+ if(!owner||email!==owner)fail_('ACCESS','ต้องเรียกจากเจ้าของโครงการที่กำหนดไว้เท่านั้น');
+ var user=readRecords_('Users').filter(function(u){return String(u.email||'').toLowerCase()===owner&&u.active===true&&hasRole_(u,'ADMIN');})[0];
+ if(!user)fail_('ACCESS','ไม่พบบัญชีเจ้าของระบบ');
+ var password=props_().getProperty('OWNER_RECOVERY_PASSWORD');
+ if(!password)fail_('INPUT','เพิ่ม Script Property ชื่อ OWNER_RECOVERY_PASSWORD เป็นรหัสใหม่อย่างน้อย 16 ตัวอักษร แล้วเรียกอีกครั้ง');
+ var result=setMyLoginPassword_(user,{password:password});props_().deleteProperty('OWNER_RECOVERY_PASSWORD');return result;
+}
+

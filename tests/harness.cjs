@@ -13,7 +13,7 @@ function harness(){
  function file(name,content=''){const id=crypto.randomUUID();return files[id]={id,name,content,trashed:false,viewers:[],getId(){return id;},getName(){return name;},getUrl(){return `https://drive.google.com/file/d/${id}/view`;},getBlob(){return {getDataAsString:()=>content,setName(){return this;}};},setTrashed(v){this.trashed=v;},addViewer(e){this.viewers.push(e);},moveTo(){return this;},getDateCreated(){return new Date();},makeCopy(n){return file(n,content);}};}
  function folder(name){const id=crypto.randomUUID();return folders[id]={getId:()=>id,createFile:(a,b)=>file(typeof a==='string'?a:a.name||'file',b||a.content||''),getFiles(){const list=Object.values(files).filter(f=>!f.trashed);let i=0;return {hasNext:()=>i<list.length,next:()=>list[i++]};}};}
  const ctx={console,Date,JSON,Math,Object,Array,Set,Map,String,Number,Boolean,RegExp,Error,isFinite,encodeURIComponent,
-  PropertiesService:{getScriptProperties:()=>({getProperty:k=>props[k]??null,setProperty(k,v){props[k]=String(v);return this;},setProperties(v){Object.assign(props,v);return this;},getProperties:()=>({...props})})},
+  PropertiesService:{getScriptProperties:()=>({getProperty:k=>props[k]??null,deleteProperty(k){delete props[k];return this;},setProperty(k,v){props[k]=String(v);return this;},setProperties(v){Object.assign(props,v);return this;},getProperties:()=>({...props})})},
   Session:{getActiveUser:()=>({getEmail:()=>email})},Utilities:{getUuid:()=>crypto.randomUUID(),DigestAlgorithm:{SHA_256:'sha'},Charset:{UTF_8:'utf8'},computeDigest:(a,s)=>Array.from(crypto.createHash('sha256').update(s).digest()),base64EncodeWebSafe:b=>Buffer.from(b).toString('base64url'),newBlob:(content,mime,name)=>({content,mime,name}),parseCsv(text){const out=[];let row=[],cell='',quote=false;for(let i=0;i<text.length;i++){const c=text[i];if(c==='"'){if(quote&&text[i+1]==='"'){cell+='"';i++;}else quote=!quote;}else if(c===','&&!quote){row.push(cell);cell='';}else if((c==='\n'||c==='\r')&&!quote){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell);out.push(row);row=[];cell='';}else cell+=c;}if(cell||row.length){row.push(cell);out.push(row);}return out;}},
   LockService:{getScriptLock:()=>({waitLock(){},releaseLock(){}})},
   SpreadsheetApp:{create:n=>book(Object.keys(books).length?'copy-'+crypto.randomUUID():'db'),openById:id=>book(id),flush(){}},
@@ -24,3 +24,4 @@ function harness(){
  return {ctx,props,tables,files,setEmail:e=>email=e,failWrite:n=>failTable=n,reset:()=>{ctx.DB_TX_=null;},seed(table,records){ctx.writeRecords_(table,records);},all:table=>JSON.parse(JSON.stringify(ctx.readRecords_(table))),plain:x=>JSON.parse(JSON.stringify(x))};
 }
 module.exports={harness};
+
