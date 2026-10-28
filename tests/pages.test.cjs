@@ -16,7 +16,7 @@ test('Pages bridge rejects foreign origins, foreign windows and wrong channels',
 });
 test('Pages client requires identity and authenticates bridge handshake before sending token',async()=>{
  let receive,frame;const sent=[];let count=0;
- const window={ST_PAGES_CONFIG:{apiUrl:'https://script.google.com/macros/s/test/exec'},addEventListener(type,fn){receive=fn;}};
+ const window={location:{origin:'https://theerawa21.github.io'},ST_PAGES_CONFIG:{apiUrl:'https://script.google.com/macros/s/test/exec'},addEventListener(type,fn){receive=fn;}};
  const document={createElement(){return {};},body:{append(el){frame=el;}}};
  vm.runInNewContext(fs.readFileSync(path.join(root,'web/pages-client.js'),'utf8'),{window,document,crypto:{randomUUID:()=>`id-${++count}`},URL,setTimeout:()=>1,clearTimeout(){},Map});
  assert.equal((await window.ST_HOST.request({action:'bootstrap'})).error.code,'IDENTITY');assert.equal(frame,undefined);

@@ -17,7 +17,7 @@
    const timer=setTimeout(()=>{frame?.remove();frame=null;ready=null;peer=null;peerOrigin=null;reject(failure('ยังเชื่อมต่อระบบข้อมูลไม่ได้ กรุณาตรวจว่าได้เผยแพร่ Apps Script รุ่นที่รองรับ GitHub Pages แล้ว'));},30000);
    ready.resolve=()=>{clearTimeout(timer);resolve();};
   });
-  const url=new URL(config.apiUrl);url.searchParams.set('mode','bridge');url.searchParams.set('channel',channel);
+  const url=new URL(config.apiUrl);url.searchParams.set('origin',window.location.origin);url.searchParams.set('mode','bridge');url.searchParams.set('channel',channel);
   frame=document.createElement('iframe');frame.hidden=true;frame.title='เชื่อมต่อข้อมูลโรงเรียน';frame.referrerPolicy='no-referrer';frame.src=url.href;document.body.append(frame);
   return ready.promise;
  }
